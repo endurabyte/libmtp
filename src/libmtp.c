@@ -9333,3 +9333,8 @@ int LIBMTP_Custom_Operation(LIBMTP_mtpdevice_t *device, uint16_t code, int n_par
 
   return 0;
 }
+
+void LIBMTP_Free(void * pointer)
+{
+	free(pointer);
+}

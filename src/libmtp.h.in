@@ -1080,6 +1080,7 @@ int LIBMTP_Handle_Events_Timeout_Completed(struct timeval *, int *);
  * @{
  */
 int LIBMTP_Custom_Operation(LIBMTP_mtpdevice_t *, uint16_t, int, ...);
+void LIBMTP_Free(void *);
 
 /** @} */
 
