@@ -656,6 +656,7 @@ LIBMTP_error_number_t LIBMTP_Detect_Raw_Devices(LIBMTP_raw_device_t ** devices,
     retdevs[i].device_entry.product = NULL;
     retdevs[i].device_entry.product_id = dev->libusb_device->descriptor.idProduct;
     retdevs[i].device_entry.device_flags = 0x00000000U;
+    retdevs[i].device_entry.device_bcd = dev->libusb_device->descriptor.bcdDevice;
     // See if we can locate some additional vendor info and device flags
     for(j = 0; j < mtp_device_table_size; j++) {
       if(dev->libusb_device->descriptor.idVendor == mtp_device_table[j].vendor_id &&
@@ -718,6 +719,7 @@ void dump_usbinfo(PTP_USB *ptp_usb)
   LIBMTP_INFO("   bDeviceProtocol: %d\n", dev->descriptor.bDeviceProtocol);
   LIBMTP_INFO("   idVendor: %04x\n", dev->descriptor.idVendor);
   LIBMTP_INFO("   idProduct: %04x\n", dev->descriptor.idProduct);
+  LIBMTP_INFO("   bcdDevice: %04x\n", dev->descriptor.bcdDevice);
   LIBMTP_INFO("   IN endpoint maxpacket: %d bytes\n", ptp_usb->inep_maxpacket);
   LIBMTP_INFO("   OUT endpoint maxpacket: %d bytes\n", ptp_usb->outep_maxpacket);
   LIBMTP_INFO("   Raw device info:\n");

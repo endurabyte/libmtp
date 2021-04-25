@@ -536,6 +536,7 @@ struct LIBMTP_device_entry_struct {
   char *product; /**< The product name of this device */
   uint16_t product_id; /**< Product ID for this device */
   uint32_t device_flags; /**< Bugs, device specifics etc */
+  uint16_t device_bcd; /**< Rev ID for this device */
 };
 
 /**
