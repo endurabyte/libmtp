@@ -79,7 +79,7 @@ char *utf16_to_utf8(LIBMTP_mtpdevice_t *device, const uint16_t *unicstr)
   char loclstr[STRING_BUFFER_LENGTH*3+1]; // UTF-8 encoding is max 3 bytes per UCS2 char.
 
   loclstr[0]='\0';
-  #if defined(HAVE_ICONV) && defined(HAVE_LANGINFO_H)
+  #if defined(HAVE_ICONV)
   PTPParams *params = (PTPParams *) device->params;
   char *stringp = (char *) unicstr;
   char *locp = loclstr;
@@ -118,7 +118,7 @@ uint16_t *utf8_to_utf16(LIBMTP_mtpdevice_t *device, const char *localstr)
   unicstr[0]='\0';
   unicstr[1]='\0';
 
-  #if defined(HAVE_ICONV) && defined(HAVE_LANGINFO_H)
+  #if defined(HAVE_ICONV)
   PTPParams *params = (PTPParams *) device->params;
   char *stringp = (char *) localstr; // cast away "const"
   size_t convlen = strlen(localstr)+1; // utf8 bytes, include terminator

@@ -1891,7 +1891,7 @@ LIBMTP_mtpdevice_t *LIBMTP_Open_Raw_Device_Uncached(LIBMTP_raw_device_t *rawdevi
   current_params->error_func = LIBMTP_ptp_error;
   /* TODO: Will this always be little endian? */
   current_params->byteorder = PTP_DL_LE;
-#if defined(HAVE_ICONV) && defined(HAVE_LANGINFO_H)
+#if defined(HAVE_ICONV)
   current_params->cd_locale_to_ucs2 = iconv_open("UTF-16LE", "UTF-8");
   current_params->cd_ucs2_to_locale = iconv_open("UTF-8", "UTF-16LE");
 
@@ -2444,7 +2444,7 @@ void LIBMTP_Release_Device(LIBMTP_mtpdevice_t *device)
   close_device(ptp_usb, params);
   // Clear error stack
   LIBMTP_Clear_Errorstack(device);
-#if defined(HAVE_ICONV) && defined(HAVE_LANGINFO_H)
+#if defined(HAVE_ICONV)
   iconv_close(params->cd_locale_to_ucs2);
   iconv_close(params->cd_ucs2_to_locale);
 #endif

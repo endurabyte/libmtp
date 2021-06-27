@@ -30,7 +30,7 @@
 #ifndef UINT_MAX
 # define UINT_MAX 0xFFFFFFFF
 #endif
-#if defined(HAVE_ICONV) && defined(HAVE_LANGINFO_H)
+#if defined(HAVE_ICONV)
 #include <iconv.h>
 #endif
 
@@ -173,7 +173,7 @@ ptp_unpack_string(PTPParams *params, unsigned char* data, uint32_t offset, uint3
 	dest = loclstr;
 	destlen = sizeof(loclstr)-1;
 	nconv = (size_t)-1;
-#if defined(HAVE_ICONV) && defined(HAVE_LANGINFO_H)
+#if defined(HAVE_ICONV)
 	if (params->cd_ucs2_to_locale != (iconv_t)-1)
 		nconv = iconv(params->cd_ucs2_to_locale, &src, &srclen, &dest, &destlen);
 #endif
@@ -215,7 +215,7 @@ ptp_pack_string(PTPParams *params, char *string, unsigned char* data, uint16_t o
 
 	/* Cannot exceed 255 (PTP_MAXSTRLEN) since it is a single byte, duh ... */
 	memset(ucs2strp, 0, sizeof(ucs2str));  /* XXX: necessary? */
-#if defined(HAVE_ICONV) && defined(HAVE_LANGINFO_H)
+#if defined(HAVE_ICONV)
 	if (params->cd_locale_to_ucs2 != (iconv_t)-1) {
 		size_t nconv;
 		size_t convmax = PTP_MAXSTRLEN * 2; /* Includes the terminator */
