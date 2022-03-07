@@ -29,6 +29,8 @@
 
 uint16_t ptp_mtpz_handshake (PTPParams* params);
 int mtpz_loaddata(void);
+int mtpz_setdata(char const * const public_exponent, char const * const hexenckey, 
+    char const * const modulus, char const * const private_key, char const * const hexcerts);
 
 #else
 
@@ -36,6 +38,12 @@ int mtpz_loaddata(void);
 static inline uint16_t ptp_mtpz_handshake (PTPParams* params)
 {
   return PTP_RC_OperationNotSupported;
+}
+
+static inline int mtpz_setdata(char const * const public_exponent, char const * const hexenckey, 
+    char const * const modulus, char const * const private_key, char const * const hexcerts)
+{
+  return -1;
 }
 
 static inline int mtpz_loaddata(void)

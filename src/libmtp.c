@@ -796,6 +796,19 @@ void LIBMTP_Init(void)
   return;
 }
 
+/**
+ * Initialize the MTPZ. 
+ */
+void LIBMTP_Init_MTPZ(char const * const public_exponent, char const * const hexenckey, 
+	char const * const modulus, char const * const private_key, char const * const hexcerts)
+{
+  if (mtpz_setdata(public_exponent, hexenckey, modulus, private_key, hexcerts) == -1)
+    use_mtpz = 0;
+  else
+    use_mtpz = 1;
+
+  return;
+}
 
 /**
  * This helper function returns a textual description for a libmtp

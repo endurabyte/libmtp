@@ -1,5 +1,6 @@
 LIBMTP_Set_Debug
 LIBMTP_Init
+LIBMTP_Init_MTPZ
 LIBMTP_Get_Supported_Devices_List
 LIBMTP_Detect_Raw_Devices
 LIBMTP_Check_Specific_Device

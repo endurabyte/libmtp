@@ -114,6 +114,36 @@ static char *hex_to_bytes(char *hex, size_t len)
 	return bytes;
 }
 
+int mtpz_setdata(char const * const public_exponent, char const * const hexenckey, char const * const modulus, 
+    char const * const private_key, char const * const hexcerts)
+{
+    if (MTPZ_PUBLIC_EXPONENT)
+        free(MTPZ_PUBLIC_EXPONENT);
+	MTPZ_PUBLIC_EXPONENT = strdup(public_exponent);
+	if (MTPZ_ENCRYPTION_KEY)
+        free(MTPZ_ENCRYPTION_KEY);
+	MTPZ_ENCRYPTION_KEY = hex_to_bytes(hexenckey, strlen(hexenckey));
+	if (!MTPZ_ENCRYPTION_KEY)
+	{
+		LIBMTP_ERROR("Unable to read MTPZ encryption key, MTPZ disabled.\n");
+		return -1;
+	}
+	if (MTPZ_MODULUS)
+        free(MTPZ_MODULUS);
+	MTPZ_MODULUS = strdup(modulus);
+	if (MTPZ_PRIVATE_KEY)
+        free(MTPZ_PRIVATE_KEY);
+	MTPZ_PRIVATE_KEY = strdup(private_key);
+	if (MTPZ_CERTIFICATES)
+        free(MTPZ_CERTIFICATES);
+	MTPZ_CERTIFICATES = hex_to_bytes(hexcerts, strlen(hexcerts));
+	if (!MTPZ_CERTIFICATES)
+	{
+		LIBMTP_ERROR("Unable to parse MTPZ certificates, MTPZ disabled.\n");
+		return -1;
+	}
+}
+
 int mtpz_loaddata()
 {
 	char *home = getenv("HOME");
