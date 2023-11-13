@@ -4,28 +4,46 @@ ACLOCAL_AMFLAGS=-I m4
 pkgconfigdir=$(libdir)/pkgconfig
 pkgconfig_DATA=libmtp.pc
 
-EXTRA_DIST=libmtp.pc libmtp.sh COPYING README.windows.txt RELEASE-CHECKLIST.md
+EXTRA_DIST = autogen.sh libmtp.pc libmtp.sh COPYING README.windows.txt RELEASE-CHECKLIST.md sync-usbids.sh
+nodist_EXTRA_DATA = .git .github .travis-translate-pkgs .travis.yml
+DISTCHECK_CONFIGURE_FLAGS = --with-udev-group=nobody --with-udev-mode=760, --disable-mtpz
 
 # This stuff only makes sense on Linux so only
 # build and ship it on Linux.
 if USE_LINUX
-udevrulesdir=@UDEV@/rules.d
-hwdbdir=@UDEV@/hwdb.d
+MTP_HOTPLUG = util/mtp-hotplug
+
 udevrules_DATA=@UDEV_RULES@
+udevrulesdir = $(datadir)
 hwdb_DATA=69-libmtp.hwdb
-noinst_DATA=libmtp.usermap libmtp.fdi
+hwdbdir = $(datadir)
+@UDEVdata_SNIPPET@
 
-libmtp.usermap: util/mtp-hotplug
-	util/mtp-hotplug > libmtp.usermap
+GENERATED = 69-libmtp.hwdb $(UDEV_RULES)
 
-@UDEV_RULES@: util/mtp-hotplug
-	util/mtp-hotplug -u -p"@UDEV@" @UDEV_GROUP@ @UDEV_MODE@ > @UDEV_RULES@
+if ENABLE_CROSSBUILD
+$(hwdb_DATA): $(MTP_HOTPLUG)
+	$(HOST_MTP_HOTPLUG) -w > $(hwdb_DATA)
 
-libmtp.fdi: util/mtp-hotplug
-	util/mtp-hotplug -H > libmtp.fdi
+@UDEV_RULES@: $(MTP_HOTPLUG)
+	$(HOST_MTP_HOTPLUG) -u -p"@UDEV@" @UDEV_GROUP@ @UDEV_MODE@ > @UDEV_RULES@
+else
+$(hwdb_DATA): $(MTP_HOTPLUG)
+	$(MTP_HOTPLUG) -w > $(hwdb_DATA)
 
-$(hwdb_DATA): util/mtp-hotplug
-	util/mtp-hotplug -w > $(hwdb_DATA)
+@UDEV_RULES@: $(MTP_HOTPLUG)
+	$(MTP_HOTPLUG) -u -p"@UDEV@" @UDEV_GROUP@ @UDEV_MODE@ > @UDEV_RULES@
 
-CLEANFILES = libmtp.usermap @UDEV_RULES@ libmtp.fdi libmtp.hwdb
+libmtp.fdi: $(MTP_HOTPLUG)
+	$(MTP_HOTPLUG) -H > libmtp.fdi
+
+libmtp.usermap: $(MTP_HOTPLUG)
+	$(MTP_HOTPLUG) > libmtp.usermap
+
+noinst_DATA = libmtp.fdi libmtp.usermap
+GENERATED += libmtp.fdi libmtp.usermap
+endif
+
+no_DIST = $(GENERATED)
+CLEANFILES = $(GENERATED)
 endif

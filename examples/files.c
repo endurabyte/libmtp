@@ -118,6 +118,7 @@ int main(int argc, char **argv)
     LIBMTP_mtpdevice_t *device;
     LIBMTP_devicestorage_t *storage;
     char *friendlyname;
+    char *serialnr;
 
     device = LIBMTP_Open_Raw_Device_Uncached(&rawdevices[i]);
     if (device == NULL) {
@@ -127,11 +128,14 @@ int main(int argc, char **argv)
 
     /* Echo the friendly name so we know which device we are working with */
     friendlyname = LIBMTP_Get_Friendlyname(device);
+    serialnr = LIBMTP_Get_Serialnumber(device);
     if (friendlyname == NULL) {
-      printf("Listing File Information on Device with name: (NULL)\n");
+      printf("Listing File Information on Device with name: (NULL) [SN:%s]\n",
+             serialnr);
     } else {
-      printf("Listing File Information on Device with name: %s\n", friendlyname);
-      free(friendlyname);
+      printf("Listing File Information on Device with name: %s [SN:%s]\n",
+             friendlyname, serialnr);
+      LIBMTP_FreeMemory(friendlyname);
     }
 
     LIBMTP_Dump_Errorstack(device);
@@ -144,7 +148,7 @@ int main(int argc, char **argv)
     LIBMTP_Release_Device(device);
   }
 
-  free(rawdevices);
+  LIBMTP_FreeMemory(rawdevices);
 
   printf("OK.\n");
   exit (0);

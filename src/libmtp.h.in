@@ -467,7 +467,6 @@ typedef struct LIBMTP_track_struct LIBMTP_track_t; /**< @see LIBMTP_track_struct
 typedef struct LIBMTP_playlist_struct LIBMTP_playlist_t; /**< @see LIBMTP_playlist_struct */
 typedef struct LIBMTP_album_struct LIBMTP_album_t; /**< @see LIBMTP_album_struct */
 typedef struct LIBMTP_folder_struct LIBMTP_folder_t; /**< @see LIBMTP_folder_t */
-typedef struct LIBMTP_object_struct LIBMTP_object_t; /**< @see LIBMTP_object_t */
 typedef struct LIBMTP_filesampledata_struct LIBMTP_filesampledata_t; /**< @see LIBMTP_filesample_t */
 typedef struct LIBMTP_devicestorage_struct LIBMTP_devicestorage_t; /**< @see LIBMTP_devicestorage_t */
 
@@ -847,6 +846,8 @@ LIBMTP_mtpdevice_t *LIBMTP_Open_Raw_Device_Uncached(LIBMTP_raw_device_t *);
 /* Begin old, legacy interface */
 LIBMTP_mtpdevice_t *LIBMTP_Get_Device(int);
 LIBMTP_mtpdevice_t *LIBMTP_Get_First_Device(void);
+LIBMTP_mtpdevice_t *LIBMTP_Get_Device_By_SerialNumber(char *);
+LIBMTP_mtpdevice_t *LIBMTP_Get_Device_By_ID(char *);
 LIBMTP_error_number_t LIBMTP_Get_Connected_Devices(LIBMTP_mtpdevice_t **);
 uint32_t LIBMTP_Number_Devices_In_List(LIBMTP_mtpdevice_t *);
 void LIBMTP_Release_Device_List(LIBMTP_mtpdevice_t*);
@@ -872,6 +873,8 @@ int LIBMTP_Check_Capability(LIBMTP_mtpdevice_t *, LIBMTP_devicecap_t);
 LIBMTP_error_t *LIBMTP_Get_Errorstack(LIBMTP_mtpdevice_t*);
 void LIBMTP_Clear_Errorstack(LIBMTP_mtpdevice_t*);
 void LIBMTP_Dump_Errorstack(LIBMTP_mtpdevice_t*);
+
+void LIBMTP_FreeMemory(void *);
 
 #define LIBMTP_STORAGE_SORTBY_NOTSORTED 0
 #define LIBMTP_STORAGE_SORTBY_FREESPACE 1
@@ -925,6 +928,10 @@ LIBMTP_file_t *LIBMTP_Get_Filelisting_With_Callback(LIBMTP_mtpdevice_t *,
 LIBMTP_file_t * LIBMTP_Get_Files_And_Folders(LIBMTP_mtpdevice_t *,
 					     uint32_t const,
 					     uint32_t const);
+int LIBMTP_Get_Children(LIBMTP_mtpdevice_t *,
+                        uint32_t const,
+                        uint32_t const,
+                        uint32_t **);
 LIBMTP_file_t *LIBMTP_Get_Filemetadata(LIBMTP_mtpdevice_t *, uint32_t const);
 int LIBMTP_Get_File_To_File(LIBMTP_mtpdevice_t*, uint32_t, char const * const,
 			LIBMTP_progressfunc_t const, void const * const);

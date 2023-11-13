@@ -1735,6 +1735,80 @@ LIBMTP_mtpdevice_t *LIBMTP_Get_First_Device(void)
 }
 
 /**
+ * Get connected MTP device by serial number.
+ * @return a device pointer.
+ * @see LIBMTP_Get_Connected_Devices()
+ */
+LIBMTP_mtpdevice_t *LIBMTP_Get_Device_By_SerialNumber(char *serial_number)
+{
+  LIBMTP_mtpdevice_t *device = NULL;
+  LIBMTP_raw_device_t *devices;
+  int numdevs;
+  LIBMTP_error_number_t ret;
+  PTPParams *params;
+  int found_device = 0;
+  int i;
+
+  if (serial_number == NULL || *serial_number == '\0')
+    return NULL;
+
+  ret = LIBMTP_Detect_Raw_Devices(&devices, &numdevs);
+  if (ret != LIBMTP_ERROR_NONE)
+    return NULL;
+
+  if (devices == NULL || numdevs == 0) {
+    free(devices);
+    return NULL;
+  }
+
+  for (i = 0; i < numdevs; i++) {
+    device = LIBMTP_Open_Raw_Device(&devices[i]);
+    if (device == NULL)
+      continue;
+
+    params = (PTPParams *) device->params;
+    if (strcmp(params->deviceinfo.SerialNumber, serial_number) == 0) {
+      found_device = 1;
+      break;
+    }
+
+    LIBMTP_Release_Device(device);
+  }
+
+  free(devices);
+
+  if (!found_device)
+    return NULL;
+
+  return device;
+}
+
+/**
+ * Get connected MTP device by list position or serial number.
+ * @return a device pointer.
+ * @see LIBMTP_Get_Connected_Devices()
+ */
+LIBMTP_mtpdevice_t *LIBMTP_Get_Device_By_ID(char *device_id)
+{
+  uint32_t device_nr;
+  char *endptr;
+
+  if (device_id == NULL || *device_id == '\0')
+    return NULL;
+
+  // 1st try: serial number
+  if (strlen(device_id) > 3 && strncmp(device_id, "SN:", 3) == 0)
+    return LIBMTP_Get_Device_By_SerialNumber(device_id + 3);
+
+  // 2nd try: device number
+  device_nr = strtoul(device_id, &endptr, 10);
+  if (*endptr == '\0')
+    return LIBMTP_Get_Device(device_nr);
+
+  return NULL;
+}
+
+/**
  * Overriding debug function.
  * This way we can disable debug prints.
  */
@@ -2969,10 +3043,9 @@ static void free_storage_list(LIBMTP_mtpdevice_t *device)
 }
 
 /**
- * This function traverses a devices storage list freeing up the
- * strings and the structs.
+ * This function sorts a devices storage list according to the criteria passed.
  * @param device a pointer to the MTP device to free the storage
- * list for.
+ * @param sortby LIBMTP_STORAGE_SORTBY_* flag to sort the list for (either by free space or maximum space)
  */
 static int sort_storage_by(LIBMTP_mtpdevice_t *device,int const sortby)
 {
@@ -2993,7 +3066,7 @@ static int sort_storage_by(LIBMTP_mtpdevice_t *device,int const sortby)
 
       if (sortby == LIBMTP_STORAGE_SORTBY_FREESPACE && ptr1->FreeSpaceInBytes > ptr2->FreeSpaceInBytes)
         ptr2 = ptr1;
-      if (sortby == LIBMTP_STORAGE_SORTBY_MAXSPACE && ptr1->FreeSpaceInBytes > ptr2->FreeSpaceInBytes)
+      if (sortby == LIBMTP_STORAGE_SORTBY_MAXSPACE && ptr1->MaxCapacity > ptr2->MaxCapacity)
         ptr2 = ptr1;
 
       ptr1 = ptr1->next;
@@ -3130,7 +3203,7 @@ static int get_suggested_storage_id(LIBMTP_mtpdevice_t *device,
  * device storage list.
  * @param device a pointer to the MTP device to free the storage
  * list for.
- * @param storageid the storage ID for the storage to flush and
+ * @param storage a pointer to the storage to flush and
  * get free space for.
  * @param freespace the free space on this storage will be returned
  * in this variable.
@@ -3811,7 +3884,7 @@ int LIBMTP_Set_Syncpartner(LIBMTP_mtpdevice_t *device,
  * if it's too big.
  * @param device a pointer to the device.
  * @param filesize the size of the file to check whether it will fit.
- * @param storageid the ID of the storage to try to fit the file on.
+ * @param storage a pointer to the storage to try to fit the file on.
  * @return 0 if the file fits, any other value means failure.
  */
 static int check_if_file_fits(LIBMTP_mtpdevice_t *device,
@@ -4597,6 +4670,63 @@ LIBMTP_file_t * LIBMTP_Get_Files_And_Folders(LIBMTP_mtpdevice_t *device,
   return retfiles;
 }
 
+/**
+ * This function retrieves the list of ids of files and folders in a certain
+ * folder with id parent on a certain storage on a certain device.
+ * The device used with this operations must have been opened with
+ * LIBMTP_Open_Raw_Device_Uncached() or it will fail.
+ *
+ * NOTE: the request will always perform I/O with the device.
+ * @param device a pointer to the MTP device to report info from.
+ * @param storage a storage on the device to report info from. If
+ *        0 is passed in, the files for the given parent will be
+ *        searched across all available storages.
+ * @param parent the parent folder id.
+ * @param out the pointer where the array of ids is returned. It is
+ *        set only when the returned value > 0. The caller takes the
+ *        ownership of the array and has to free() it.
+ * @return the length of the returned array or -1 in case of failure.
+ */
+
+int LIBMTP_Get_Children(LIBMTP_mtpdevice_t *device,
+                        uint32_t const storage,
+                        uint32_t const parent,
+                        uint32_t **out)
+{
+  PTPParams *params = (PTPParams *) device->params;
+  PTPObjectHandles currentHandles;
+  uint32_t storageid;
+  uint16_t ret;
+
+  if (device->cached) {
+    // This function is only supposed to be used by devices
+    // opened as uncached!
+    LIBMTP_ERROR("tried to use %s on a cached device!\n", __func__);
+    return -1;
+  }
+
+  if (storage == 0)
+    storageid = PTP_GOH_ALL_STORAGE;
+  else
+    storageid = storage;
+
+  ret = ptp_getobjecthandles(params,
+                             storageid,
+                             PTP_GOH_ALL_FORMATS,
+                             parent,
+                             &currentHandles);
+
+  if (ret != PTP_RC_OK) {
+    add_ptp_error_to_errorstack(device, ret,
+        "LIBMTP_Get_Children(): could not get object handles.");
+    return -1;
+  }
+
+  if (currentHandles.Handler == NULL || currentHandles.n == 0)
+    return 0;
+  *out = currentHandles.Handler;
+  return currentHandles.n;
+}
 
 /**
  * This creates a new track metadata structure and allocates memory
@@ -4763,7 +4893,6 @@ static void pick_property_to_track_metadata(LIBMTP_mtpdevice_t *device, MTPPrope
  * This function retrieves the track metadata for a track
  * given by a unique ID.
  * @param device a pointer to the device to get the track metadata off.
- * @param trackid the unique ID of the track.
  * @param objectformat the object format of this track, so we know what it supports.
  * @param track a metadata set to fill in.
  */
@@ -5570,8 +5699,8 @@ int LIBMTP_Send_Track_From_File(LIBMTP_mtpdevice_t *device,
 
 /**
  * This helper function checks if a filename already exists on the device
- * @param PTPParams*
- * @param string representing the filename
+ * @param params the PTP params to check against
+ * @param filename a string representing the filename
  * @return 0 if the filename doesn't exist, -1 if it does
  */
 static int check_filename_exists(PTPParams* params, char const * const filename)
@@ -5591,7 +5720,8 @@ static int check_filename_exists(PTPParams* params, char const * const filename)
 
 /**
  * This helper function returns a unique filename, with a random string before the extension
- * @param string representing the original filename
+ * @param params the PTP params to check against
+ * @param filename string representing the original filename
  * @return a string representing the unique filename
  */
 static char *generate_unique_filename(PTPParams* params, char const * const filename)
@@ -7230,7 +7360,7 @@ LIBMTP_folder_t *LIBMTP_new_folder_t(void)
 /**
  * This recursively deletes the memory for a folder structure.
  * This shall typically be called on a top-level folder list to
- * detsroy the entire folder tree.
+ * destroy the entire folder tree.
  *
  * @param folder folder structure to destroy
  * @see LIBMTP_new_folder_t()
@@ -7263,7 +7393,7 @@ void LIBMTP_destroy_folder_t(LIBMTP_folder_t *folder)
  * specified id.
  *
  * @param folderlist list of folders to search
- * @id id of folder to look for
+ * @param id of folder to look for
  * @return a folder or NULL if not found
  */
 LIBMTP_folder_t *LIBMTP_Find_Folder(LIBMTP_folder_t *folderlist, uint32_t id)
@@ -8918,7 +9048,7 @@ int LIBMTP_Get_Representative_Sample_Format(LIBMTP_mtpdevice_t *device,
  * maximum size, dimensions, etc..
  * @param device a pointer to the device which the object is on.
  * @param id unique id of the object to set artwork for.
- * @param pointer to LIBMTP_filesampledata_t struct containing data
+ * @param sampledata pointer to LIBMTP_filesampledata_t struct containing data
  * @return 0 on success, any other value means failure.
  * @see LIBMTP_Get_Representative_Sample()
  * @see LIBMTP_Get_Representative_Sample_Format()
@@ -9013,7 +9143,7 @@ int LIBMTP_Send_Representative_Sample(LIBMTP_mtpdevice_t *device,
  * if the device supports it.
  * @param device a pointer to the device which the object is on.
  * @param id unique id of the object to get data for.
- * @param pointer to LIBMTP_filesampledata_t struct to receive data
+ * @param sampledata pointer to LIBMTP_filesampledata_t struct to receive data
  * @return 0 on success, any other value means failure.
  * @see LIBMTP_Send_Representative_Sample()
  * @see LIBMTP_Get_Representative_Sample_Format()
@@ -9089,6 +9219,8 @@ int LIBMTP_Get_Representative_Sample(LIBMTP_mtpdevice_t *device,
  * Retrieve the thumbnail for a file.
  * @param device a pointer to the device to get the thumbnail from.
  * @param id the object ID of the file to retrieve the thumbnail for.
+ * @param data a memory pointer to retrieved thumbnail (user frees memory later when done with data).
+ * @param size data length of retrieved thumbnail.
  * @return 0 on success, any other value means failure.
  */
 int LIBMTP_Get_Thumbnail(LIBMTP_mtpdevice_t *device, uint32_t const id,
@@ -9347,7 +9479,11 @@ int LIBMTP_Custom_Operation(LIBMTP_mtpdevice_t *device, uint16_t code, int n_par
   return 0;
 }
 
-void LIBMTP_Free(void * pointer)
+/**
+ * Free memory allocated by libmtp. Is doing the same as libc free(mem) in most cases.
+ * @mem pointer to allocated memory.
+ */
+void LIBMTP_FreeMemory(void *mem)
 {
-	free(pointer);
+  free (mem);
 }
